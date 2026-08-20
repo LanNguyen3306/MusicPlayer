@@ -25,6 +25,10 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     hash_password = Column(String)
     is_active = Column(Boolean, default=True)
+    
+    # lưu OTP để đặt lại mật khẩu
+    reset_otp = Column(String, nullable=True)
+    otp_expire_at = Column(DateTime, nullable=True)
 
     # thuộc tính ảo, giúp gọi user1.songs
     songs = relationship("Song", back_populates="owner")

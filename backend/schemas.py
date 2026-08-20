@@ -60,3 +60,20 @@ class HistoryResponse(BaseModel):
 
     class Config:
         from_attributes = True
+        
+# --- SCHEMAS CHO TOKEN ---
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    username: Optional[str] = None
+    
+# --- SCHEMAS CHO QUÊN MẬT KHẨU ---
+class ForgotPassword(BaseModel):
+    email: str
+
+class ResetPassword(BaseModel):
+    email: str
+    otp: str
+    new_password: str
