@@ -1,13 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from .. import models, schemas, utils
 from ..database import SessionLocal
+from .. import config
+from jose import jwt, JWTError
 
 router = APIRouter(
     prefix="/users",
     tags=["Users"]
 )
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="user/login")
 
 def get_db():
     db = SessionLocal()
@@ -20,10 +24,10 @@ def get_db():
 def register_user(user: schemas.UserCreate, db:Session=Depends(get_db)):
     db_user = db.query(models.User).filter(
         (models.User.username == user.username) |
-        (models.User.email == user.email).first()
-    )
+        (models.User.email == user.email)
+    ).first()
     
-    if db.user:
+    if db_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Tên đăng nhập hoặc Email đã được sử dụng"
@@ -57,3 +61,27 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     access_token = utils.create_access_token(data={"sub": user.username})
     
     return {"access_token": access_token, "token_type": "bearer"}
+
+def get_current_user(token: str = Depends(oauth2_scheme), db:Session = Depends(get_db)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail = "Không thể xác thực thông tin (Token không hợp lệ hoặc đã hết hạn)",
+        headers = {"WWW-Authenticate":"Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, config.SECRET_KEY, algorithms=[config.ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    
+    user = db.query(models.User).filter(models.User.username == username).first()
+    if user is None:
+        raise credentials_exception
+    
+    return user
+
+@router.get("/me", response_model=schemas.UserResponse)
+def read_users_me(current_user: models.User = Depends(get_current_user)):
+    return current_user

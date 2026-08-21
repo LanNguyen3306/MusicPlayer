@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
+from typing import Optional, List
 
 class SongBase(BaseModel):
     title: str
