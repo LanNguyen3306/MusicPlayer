@@ -2,19 +2,20 @@ from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, T
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from .database import Base
+from sqlalchemy.sql import func
 
 user_favourites = Table(
     "user_favourites",
     Base.metadata,
-    Column("user_id", Integer, ForeignKey("users.id"), primary_key=True),
-    Column("song_id", Integer, ForeignKey("songs.id"), primary_key=True)
+    Column("user_id", Integer, ForeignKey("users.id", ondelete='CASCADE'), primary_key=True),
+    Column("song_id", Integer, ForeignKey("songs.id", ondelete='CASCADE'), primary_key=True)
 )
 
 playlist_songs = Table(
     "playlist_songs",
     Base.metadata,
-    Column("playlist_id", Integer, ForeignKey("playlists.id"), primary_key=True),
-    Column("song_id", Integer, ForeignKey("songs.id"), primary_key=True)
+    Column("playlist_id", Integer, ForeignKey("playlists.id", ondelete='CASCADE'), primary_key=True),
+    Column("song_id", Integer, ForeignKey("songs.id", ondelete='CASCADE'), primary_key=True)
 )
 
 class User(Base):
@@ -32,7 +33,9 @@ class User(Base):
 
     # thuộc tính ảo, giúp gọi user1.songs
     songs = relationship("Song", back_populates="owner")
-
+    playlists = relationship("Playlist", back_populates="owner")
+    histories = relationship("ListeningHistory", back_populates="user")
+    favorites = relationship("Song", secondary=user_favourites, backref="favorited_by")
 
 class Song(Base):
     __tablename__ = "songs"
@@ -54,6 +57,7 @@ class Playlist(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
+    description = Column(String, nullable=True)
     created_at=Column(DateTime, default=datetime.utcnow)
     
     owner_id = Column(Integer, ForeignKey("users.id"))

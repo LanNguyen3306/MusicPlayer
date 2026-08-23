@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Tải nhạc - Music Player</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+    
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-5 sticky-top">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="index.html">🎵 Music Hub</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item"><a class="nav-link" href="index.html">Khám phá</a></li>
+                <li class="nav-item"><a class="nav-link" href="favorites.html">Yêu thích</a></li>
+                <li class="nav-item"><a class="nav-link" href="playlists.html">Playlist của tôi</a></li>
+                <li class="nav-item"><a class="nav-link" href="upload.html">Tải nhạc lên</a></li>
+            </ul>
+            <div class="d-flex align-items-center">
+                <span class="text-light me-3 fw-medium" id="nav-username"></span>
+                <button onclick="logout()" class="btn btn-outline-light btn-sm rounded-pill px-3">Đăng xuất</button>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- TRÌNH PHÁT NHẠC (DÙNG CHUNG) -->
+<div id="player-container" class="d-none">
+    <div class="container d-flex flex-column align-items-center">
+        <h6 id="now-playing" class="mb-2 text-info fw-bold">Đang phát: ...</h6>
+        <audio id="audio-player" controls style="width: 100%; max-width: 600px; outline: none; border-radius: 30px;"></audio>
+    </div>
+</div>
+
+<script>
+    async function loadNavProfile() {
+        const res = await fetchAPI('/users/me');
+        if (res.ok) {
+            const user = await res.json();
+            const navEl = document.getElementById('nav-username');
+            if (navEl) navEl.innerText = `Xin chào, ${user.username}!`;
+        }
+    }
+    if(getToken()) loadNavProfile();
+</script>
+
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card p-4 shadow-sm border-0">
+                    <h3 class="text-center mb-4 text-success fw-bold">📤 Tải Nhạc Lên</h3>
+                    <form id="uploadForm">
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">Tên bài hát</label>
+                            <input type="text" id="title" class="form-control bg-light" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">Ca sĩ</label>
+                            <input type="text" id="artist" class="form-control bg-light" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label fw-medium">File nhạc (.mp3)</label>
+                            <input type="file" id="file" accept=".mp3" class="form-control bg-light" required>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100 py-2 fw-bold rounded-pill" id="btn-upload">Tải lên hệ thống</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/api.js"></script>
+    <script>
+        checkAuth();
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-upload');
+            btn.innerText = "Đang xử lý..."; btn.disabled = true;
+
+            const formData = new FormData();
+            formData.append('title', document.getElementById('title').value);
+            formData.append('artist', document.getElementById('artist').value);
+            formData.append('file', document.getElementById('file').files[0]);
+
+            const res = await fetchAPI('/songs/upload', {
+                method: 'POST',
+                body: formData // FormData tự set headers
+            });
+
+            if (res.ok) {
+                alert("Tải nhạc thành công!");
+                window.location.href = "index.html";
+            } else {
+                alert("Lỗi tải nhạc.");
+                btn.innerText = "Tải lên hệ thống"; btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Playlist của tôi - Music Player</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+    
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-5 sticky-top">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="index.html">🎵 Music Hub</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item"><a class="nav-link" href="index.html">Khám phá</a></li>
+                <li class="nav-item"><a class="nav-link" href="favorites.html">Yêu thích</a></li>
+                <li class="nav-item"><a class="nav-link" href="playlists.html">Playlist của tôi</a></li>
+                <li class="nav-item"><a class="nav-link" href="upload.html">Tải nhạc lên</a></li>
+            </ul>
+            <div class="d-flex align-items-center">
+                <span class="text-light me-3 fw-medium" id="nav-username"></span>
+                <button onclick="logout()" class="btn btn-outline-light btn-sm rounded-pill px-3">Đăng xuất</button>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- TRÌNH PHÁT NHẠC (DÙNG CHUNG) -->
+<div id="player-container" class="d-none">
+    <div class="container d-flex flex-column align-items-center">
+        <h6 id="now-playing" class="mb-2 text-info fw-bold">Đang phát: ...</h6>
+        <audio id="audio-player" controls style="width: 100%; max-width: 600px; outline: none; border-radius: 30px;"></audio>
+    </div>
+</div>
+
+<script>
+    async function loadNavProfile() {
+        const res = await fetchAPI('/users/me');
+        if (res.ok) {
+            const user = await res.json();
+            const navEl = document.getElementById('nav-username');
+            if (navEl) navEl.innerText = `Xin chào, ${user.username}!`;
+        }
+    }
+    if(getToken()) loadNavProfile();
+</script>
+
+    <div class="container">
+        <div class="row mb-4">
+            <div class="col-lg-4 mb-4">
+                <div class="card p-4 border-0 shadow-sm bg-white">
+                    <h5 class="text-success fw-bold mb-3">➕ Tạo Playlist Mới</h5>
+                    <form id="form-create-playlist">
+                        <div class="mb-3">
+                            <input type="text" id="pl-name" class="form-control bg-light" placeholder="Tên Playlist (VD: Nhạc làm việc)" required>
+                        </div>
+                        <div class="mb-3">
+                            <input type="text" id="pl-desc" class="form-control bg-light" placeholder="Mô tả ngắn...">
+                        </div>
+                        <button type="submit" class="btn btn-success w-100 fw-bold rounded-pill">Tạo Danh Sách</button>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="col-lg-8">
+                <h4 class="text-dark fw-bold mb-4">📁 Danh sách Playlist</h4>
+                <div class="row" id="playlist-container">
+                    <!-- Playlists -->
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/api.js"></script>
+    <script>
+        checkAuth();
+        
+        async function loadPlaylists() {
+            const res = await fetchAPI('/playlists/me');
+            if (res.ok) {
+                const playlists = await res.json();
+                const container = document.getElementById('playlist-container');
+                container.innerHTML = '';
+                
+                if (playlists.length === 0) {
+                    container.innerHTML = '<div class="col-12"><p class="text-muted">Bạn chưa tạo Playlist nào.</p></div>';
+                    return;
+                }
+
+                playlists.forEach(pl => {
+                    let songsHtml = pl.songs.map(s => `
+                        <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
+                            <small class="text-truncate pe-2">${s.title}</small>
+                            <button onclick="playSong(${s.id}, '${s.title.replace("'", "\'") }', '${s.artist.replace("'", "\'") }')" class="btn btn-link btn-sm p-0 text-decoration-none">▶</button>
+                        </div>
+                    `).join('');
+                    
+                    // Format thời gian
+                    const dateObj = new Date(pl.created_at);
+                    const dateStr = dateObj.toLocaleDateString('vi-VN');
+
+                    container.innerHTML += `
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100 p-3 shadow-sm border-0">
+                                <h5 class="text-primary fw-bold mb-1">${pl.name}</h5>
+                                <small class="text-muted d-block mb-2">${pl.description || 'Chưa có mô tả'} • Tạo ngày ${dateStr}</small>
+                                <span class="badge bg-secondary mb-3 w-auto" style="align-self: flex-start;">${pl.songs.length} bài hát</span>
+                                <div class="playlist-scroll bg-light p-2 rounded">
+                                    ${songsHtml || '<small class="text-muted text-center d-block py-2">Chưa có nhạc</small>'}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+        }
+
+        document.getElementById('form-create-playlist').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const bodyData = {
+                name: document.getElementById('pl-name').value,
+                description: document.getElementById('pl-desc').value
+            };
+
+            const res = await fetchAPI('/playlists/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(bodyData)
+            });
+
+            if (res.ok) {
+                document.getElementById('form-create-playlist').reset();
+                loadPlaylists();
+            } else {
+                alert("Lỗi khi tạo Playlist.");
+            }
+        });
+
+        loadPlaylists();
+    </script>
+</body>
+</html>

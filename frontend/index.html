@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Trang chủ - Music Player</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+    
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-5 sticky-top">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="index.html">🎵 Music Hub</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item"><a class="nav-link" href="index.html">Khám phá</a></li>
+                <li class="nav-item"><a class="nav-link" href="favorites.html">Yêu thích</a></li>
+                <li class="nav-item"><a class="nav-link" href="playlists.html">Playlist của tôi</a></li>
+                <li class="nav-item"><a class="nav-link" href="upload.html">Tải nhạc lên</a></li>
+            </ul>
+            <div class="d-flex align-items-center">
+                <span class="text-light me-3 fw-medium" id="nav-username"></span>
+                <button onclick="logout()" class="btn btn-outline-light btn-sm rounded-pill px-3">Đăng xuất</button>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- TRÌNH PHÁT NHẠC (DÙNG CHUNG) -->
+<div id="player-container" class="d-none">
+    <div class="container d-flex flex-column align-items-center">
+        <h6 id="now-playing" class="mb-2 text-info fw-bold">Đang phát: ...</h6>
+        <audio id="audio-player" controls style="width: 100%; max-width: 600px; outline: none; border-radius: 30px;"></audio>
+    </div>
+</div>
+
+<script>
+    async function loadNavProfile() {
+        const res = await fetchAPI('/users/me');
+        if (res.ok) {
+            const user = await res.json();
+            const navEl = document.getElementById('nav-username');
+            if (navEl) navEl.innerText = `Xin chào, ${user.username}!`;
+        }
+    }
+    if(getToken()) loadNavProfile();
+</script>
+
+    <div class="container">
+        <h3 class="mb-4 text-primary fw-bold">🎧 Tất cả bài hát</h3>
+        <div class="row" id="song-list">
+            <!-- Bài hát render ở đây -->
+        </div>
+    </div>
+
+    <!-- Modal Chọn Playlist -->
+    <div class="modal fade" id="playlistModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-primary text-white border-0">
+                    <h5 class="modal-title fw-bold">Thêm vào Playlist</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="list-group list-group-flush" id="modal-playlist-list">
+                        <!-- Danh sách playlist tải từ API -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/api.js"></script>
+    <script>
+        checkAuth();
+        let currentSelectedSongId = null;
+        let playlistModalInstance = null;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            playlistModalInstance = new bootstrap.Modal(document.getElementById('playlistModal'));
+            loadSongs();
+        });
+
+        async function loadSongs() {
+            const res = await fetchAPI('/songs/');
+            if (res.ok) {
+                const songs = await res.json();
+                const container = document.getElementById('song-list');
+                container.innerHTML = '';
+                
+                if (songs.length === 0) {
+                    container.innerHTML = '<div class="col-12"><p class="text-muted">Chưa có bài hát nào trong hệ thống.</p></div>';
+                    return;
+                }
+
+                songs.forEach(song => {
+                    container.innerHTML += `
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card song-card h-100 p-3">
+                                <h5 class="text-truncate text-dark fw-bold">${song.title}</h5>
+                                <p class="text-muted mb-3">${song.artist}</p>
+                                <div class="mt-auto d-flex flex-wrap gap-2">
+                                    <button onclick="playSong(${song.id}, '${song.title.replace("'", "\'") }', '${song.artist.replace("'", "\'") }')" class="btn btn-primary flex-grow-1 rounded-pill">▶ Phát</button>
+                                    <button onclick="toggleFavorite(${song.id})" class="btn btn-outline-danger rounded-pill">❤️</button>
+                                    <button onclick="openPlaylistModal(${song.id})" class="btn btn-outline-success rounded-pill">➕ Playlist</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+        }
+
+        async function openPlaylistModal(songId) {
+            currentSelectedSongId = songId;
+            const res = await fetchAPI('/playlists/me');
+            
+            if (res.ok) {
+                const playlists = await res.json();
+                const listEl = document.getElementById('modal-playlist-list');
+                listEl.innerHTML = '';
+                
+                if (playlists.length === 0) {
+                    listEl.innerHTML = '<div class="p-4 text-center text-muted">Bạn chưa có Playlist nào.<br><a href="playlists.html" class="btn btn-sm btn-primary mt-2">Tạo ngay</a></div>';
+                } else {
+                    playlists.forEach(pl => {
+                        const isAdded = pl.songs.some(s => s.id === currentSelectedSongId);
+                        const btnStyle = isAdded ? 'list-group-item-success' : '';
+                        const btnText = isAdded ? '✓ Đã thêm (Nhấn để bỏ)' : '+ Thêm vào';
+                        
+                        listEl.innerHTML += `
+                            <button onclick="toggleSongInPlaylist(${pl.id})" class="list-group-item list-group-item-action ${btnStyle} d-flex justify-content-between align-items-center py-3">
+                                <span class="fw-medium">${pl.name}</span>
+                                <small class="fw-bold">${btnText}</small>
+                            </button>
+                        `;
+                    });
+                }
+                playlistModalInstance.show();
+            }
+        }
+
+        async function toggleSongInPlaylist(playlistId) {
+            if (!currentSelectedSongId) return;
+            const res = await fetchAPI(`/playlists/${playlistId}/toggle-song/${currentSelectedSongId}`, { method: 'POST' });
+            if (res.ok) {
+                playlistModalInstance.hide();
+                const data = await res.json();
+                // Dùng toast hoặc alert gọn nhẹ
+                setTimeout(() => alert(data.message), 300); 
+            }
+        }
+    </script>
+</body>
+</html>

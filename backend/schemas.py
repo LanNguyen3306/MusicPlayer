@@ -42,11 +42,12 @@ class PlaylistBase(BaseModel):
     name: str
 
 class PlaylistCreate(PlaylistBase):
-    pass
+    description: Optional[str] = None
 
 class PlaylistResponse(PlaylistBase):
     id: int
     created_at: datetime
+    description: Optional[str] = None
     owner_id: int
     songs: List[SongResponse] = [] # Trả về luôn danh sách bài hát trong playlist này
 

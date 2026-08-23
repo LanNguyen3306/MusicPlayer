@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Yêu thích - Music Player</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+    
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-5 sticky-top">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="index.html">🎵 Music Hub</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item"><a class="nav-link" href="index.html">Khám phá</a></li>
+                <li class="nav-item"><a class="nav-link" href="favorites.html">Yêu thích</a></li>
+                <li class="nav-item"><a class="nav-link" href="playlists.html">Playlist của tôi</a></li>
+                <li class="nav-item"><a class="nav-link" href="upload.html">Tải nhạc lên</a></li>
+            </ul>
+            <div class="d-flex align-items-center">
+                <span class="text-light me-3 fw-medium" id="nav-username"></span>
+                <button onclick="logout()" class="btn btn-outline-light btn-sm rounded-pill px-3">Đăng xuất</button>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- TRÌNH PHÁT NHẠC (DÙNG CHUNG) -->
+<div id="player-container" class="d-none">
+    <div class="container d-flex flex-column align-items-center">
+        <h6 id="now-playing" class="mb-2 text-info fw-bold">Đang phát: ...</h6>
+        <audio id="audio-player" controls style="width: 100%; max-width: 600px; outline: none; border-radius: 30px;"></audio>
+    </div>
+</div>
+
+<script>
+    async function loadNavProfile() {
+        const res = await fetchAPI('/users/me');
+        if (res.ok) {
+            const user = await res.json();
+            const navEl = document.getElementById('nav-username');
+            if (navEl) navEl.innerText = `Xin chào, ${user.username}!`;
+        }
+    }
+    if(getToken()) loadNavProfile();
+</script>
+
+    <div class="container">
+        <h3 class="mb-4 text-danger fw-bold">❤️ Nhạc Yêu Thích</h3>
+        <div class="row" id="fav-list"></div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/api.js"></script>
+    <script>
+        checkAuth();
+        async function loadFavorites() {
+            const res = await fetchAPI('/users/me/favorites');
+            if (res.ok) {
+                const songs = await res.json();
+                const container = document.getElementById('fav-list');
+                container.innerHTML = '';
+                if (songs.length === 0) {
+                    container.innerHTML = '<div class="col-12"><p class="text-muted">Chưa có bài hát yêu thích.</p></div>';
+                    return;
+                }
+                songs.forEach(song => {
+                    container.innerHTML += `
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card song-card h-100 p-3">
+                                <h5 class="text-truncate fw-bold">${song.title}</h5>
+                                <p class="text-muted mb-3">${song.artist}</p>
+                                <div class="mt-auto d-flex gap-2">
+                                    <button onclick="playSong(${song.id}, '${song.title.replace("'", "\'") }', '${song.artist.replace("'", "\'") }')" class="btn btn-primary flex-grow-1 rounded-pill">▶ Phát</button>
+                                    <button onclick="toggleFavorite(${song.id})" class="btn btn-danger rounded-pill">Hủy Thích</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+        }
+        loadFavorites();
+    </script>
+</body>
+</html>

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Đăng nhập - Music Player</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body class="d-flex align-items-center justify-content-center" style="height: 100vh; padding-bottom: 0;">
+    <div class="card p-4 shadow-lg border-0" style="width: 420px; border-radius: 20px;">
+        <div class="text-center mb-4">
+            <h2 class="text-primary fw-bold">🎵 Music Hub</h2>
+        </div>
+        <ul class="nav nav-pills nav-justified mb-4" role="tablist">
+            <li class="nav-item"><button class="nav-link active fw-bold" data-bs-toggle="pill" data-bs-target="#login" type="button">Đăng Nhập</button></li>
+            <li class="nav-item"><button class="nav-link fw-bold" data-bs-toggle="pill" data-bs-target="#register" type="button">Đăng Ký</button></li>
+        </ul>
+        <div class="tab-content">
+            <div class="tab-pane fade show active" id="login">
+                <form id="form-login">
+                    <input type="text" id="l-user" class="form-control mb-3 py-2 bg-light" placeholder="Tên đăng nhập" required>
+                    <input type="password" id="l-pass" class="form-control mb-4 py-2 bg-light" placeholder="Mật khẩu" required>
+                    <button type="submit" class="btn btn-primary w-100 py-2 fw-bold rounded-pill mb-3">Vào Nghe Nhạc</button>
+                    <div class="text-center"><a href="forgot-password.html" class="text-decoration-none small text-muted">Quên mật khẩu?</a></div>
+                </form>
+            </div>
+            <div class="tab-pane fade" id="register">
+                <form id="form-register">
+                    <input type="text" id="r-user" class="form-control mb-3 py-2 bg-light" placeholder="Tên đăng nhập" required>
+                    <input type="email" id="r-email" class="form-control mb-3 py-2 bg-light" placeholder="Email" required>
+                    <input type="password" id="r-pass" class="form-control mb-4 py-2 bg-light" placeholder="Mật khẩu" required>
+                    <button type="submit" class="btn btn-success w-100 py-2 fw-bold rounded-pill">Tạo Tài Khoản</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/api.js"></script>
+    <script>
+        if (getToken()) window.location.href = "index.html";
+        document.getElementById('form-login').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new URLSearchParams();
+            formData.append("username", document.getElementById('l-user').value);
+            formData.append("password", document.getElementById('l-pass').value);
+            const res = await fetch(`${API_URL}/users/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setToken(data.access_token);
+                window.location.href = "index.html";
+            } else alert("Sai tài khoản hoặc mật khẩu!");
+        });
+
+        document.getElementById('form-register').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const body = {
+                username: document.getElementById('r-user').value,
+                email: document.getElementById('r-email').value,
+                password: document.getElementById('r-pass').value
+            };
+            const res = await fetch(`${API_URL}/users/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            if (res.ok) {
+                alert("Đăng ký thành công!");
+                document.querySelector('[data-bs-target="#login"]').click();
+            } else alert("Tài khoản hoặc email đã tồn tại.");
+        });
+    </script>
+</body>
+</html>

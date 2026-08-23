@@ -5,6 +5,7 @@ from .. import models, schemas, utils
 from ..database import SessionLocal
 from .. import config
 from jose import jwt, JWTError
+from typing import List
 
 router = APIRouter(
     prefix="/users",
@@ -85,3 +86,8 @@ def get_current_user(token: str = Depends(oauth2_scheme), db:Session = Depends(g
 @router.get("/me", response_model=schemas.UserResponse)
 def read_users_me(current_user: models.User = Depends(get_current_user)):
     return current_user
+
+@router.get("/me/favorites", response_model=List[schemas.SongResponse])
+def get_my_favorites(current_user: models.User = Depends(get_current_user)):
+    # Biến current_user.favorites đã chứa sẵn toàn bộ bài hát nhờ relationship!
+    return current_user.favorites
